@@ -1,0 +1,48 @@
+server:
+  port: 8094
+
+spring:
+  application:
+    name: bidding-service
+  cloud:
+    inetutils:
+      preferred-networks:
+        - 127\.0\.0\.1
+        - localhost
+      ignored-interfaces:
+        - vEthernet.*
+        - Hyper-V.*
+        - WSL.*
+        - VMware.*
+        - VirtualBox.*
+  datasource:
+    url: jdbc:mysql://localhost:3307/auctiondb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: auction
+    password: auction
+  jpa:
+    hibernate:
+      ddl-auto: update
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000/realms/auction
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

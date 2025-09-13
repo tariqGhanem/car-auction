@@ -1,0 +1,47 @@
+server:
+  port: 8092
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+spring:
+  application:
+    name: inventory-service
+  cloud:
+    inetutils:
+      preferred-networks:
+        - 127\.0\.0\.1
+        - localhost
+      ignored-interfaces:
+        - vEthernet.*
+        - Hyper-V.*
+        - WSL.*
+        - VMware.*
+        - VirtualBox.*
+  datasource:
+    url: jdbc:mysql://localhost:3307/auctiondb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: auction
+    password: auction
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000/realms/auction
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+      hibernate.jdbc.time_zone: UTC
+    open-in-view: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}

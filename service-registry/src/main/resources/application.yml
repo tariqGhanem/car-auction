@@ -1,0 +1,22 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: service-registry
+
+eureka:
+  instance:
+    # Force how the instance is advertised to Eureka
+    prefer-ip-address: true          # register by IP
+    ip-address: 127.0.0.1            # loopback (same PC)
+    hostname: localhost              # (kept for clarity; prefer-ip wins)
+    nonSecurePort: ${server.port}
+    instance-id: ${spring.application.name}:${server.port}
+    statusPageUrlPath: /actuator/info
+    healthCheckUrlPath: /actuator/health
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    renewal-percent-threshold: 0.49

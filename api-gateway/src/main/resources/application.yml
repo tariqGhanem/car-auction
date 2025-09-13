@@ -1,0 +1,129 @@
+server:
+  port: 8080
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000/realms/auction
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 2000        # 2s to establish TCP
+        response-timeout: 3s         # 3s total for response
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: false
+        default-filters:
+          - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials RETAIN_FIRST
+          - RemoveRequestHeader=Cookie
+      routes:
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/api/v1/user
+            - name: CircuitBreaker
+              args:
+                name: id-cb
+                fallbackUri: forward:/fallback/identity
+                statusCodes:
+                  - 500
+
+        - id: inventory-service
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/inventory/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/api/v1/vehicles
+            - name: CircuitBreaker
+              args:
+                name: inv-cb
+                fallbackUri: forward:/fallback/inventory
+                statusCodes:
+                  - 500
+        - id: auction-service
+          uri: lb://AUCTION-SERVICE
+          predicates:
+            - Path=/auctions/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/api/v1/auction
+            - name: CircuitBreaker
+              args:
+                name: auc-cb
+                fallbackUri: forward:/fallback/auction
+                statusCodes:
+                  - 500
+        - id: bidding-service
+          uri: lb://BIDDING-SERVICE
+          predicates:
+            - Path=/bids/**
+          filters:
+            - StripPrefix=1
+            - PrefixPath=/api/v1/bid
+            - name: CircuitBreaker
+              args:
+                name: bid-cb
+                fallbackUri: forward:/fallback/bids
+                statusCodes:
+                  - 500
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/notification/**
+          filters:
+            - StripPrefix=1
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: TIME_BASED
+        slidingWindowSize: 30
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 4
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 2
+
+    instances:
+      auc-cb:
+        baseConfig: default
+      bid-cb:
+        baseConfig: default
+      inv-cb:
+        baseConfig: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always   # or 'always' in dev
+      probes:
+        enabled: true                 # adds /health/liveness, /health/readiness
+    metrics:
+      tags:
+        application: ${spring.application.name}
