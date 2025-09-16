@@ -4,6 +4,7 @@ import com.auction.auction.Models.Auction;
 import com.auction.auction.Models.DTO.AuctionDtos;
 import com.auction.auction.Repo.AuctionRepo;
 import com.auction.auction.Services.AuctionService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,14 +35,14 @@ public class AuctionController {
     }
     //Create Auction
     @PostMapping("createAuction")
-    public Auction createAuction(@RequestBody AuctionDtos.CreateAuctionRequest auction , @AuthenticationPrincipal org.springframework.security.oauth2.jwt.Jwt jwt) {
+    public Auction createAuction(@Valid @RequestBody AuctionDtos.CreateAuctionRequest auction , @AuthenticationPrincipal org.springframework.security.oauth2.jwt.Jwt jwt) {
         return auctionService.createDraft(auction , jwt.getTokenValue());
     }
     //Filter Auctions
     @GetMapping("filterAuction")
     public Page<Auction> filterAuction(
             @RequestParam(name = "dateFrom" , required = false) Instant dateFrom ,
-            @RequestParam(required = false , name = "dateTo") Instant dateTo ,
+            @RequestParam(name = "dateTo" , required = false) Instant dateTo ,
             @RequestParam(name = "maxBuyNow" , required = false) BigDecimal maxBuyNow,
             @RequestParam(name = "maxBid"  , required = false) BigDecimal maxBid) {
 

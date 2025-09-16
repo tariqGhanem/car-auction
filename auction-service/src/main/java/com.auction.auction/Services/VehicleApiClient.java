@@ -18,6 +18,7 @@ public class VehicleApiClient {
     private final WebClient webClient;
 
 
+
     private URI vehicleBaseUri() {
         var instances = discoveryClient.getInstances("inventory-service");
         if (instances.isEmpty()) throw new IllegalStateException("inventory-service not found in Eureka");
@@ -27,7 +28,7 @@ public class VehicleApiClient {
     public Mono<VehicleDTO> getVehicles(Long id, String token) {
         var base = vehicleBaseUri();
         return webClient.get()
-                .uri(base.resolve("/api/v1/vehicles/getVehicleById?id=" + id))
+                .uri(base.resolve("/api/v1/vehicles/" + id))
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .retrieve()
                 .bodyToMono(VehicleDTO.class);

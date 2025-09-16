@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.UUID;
 
 public class AuctionDtos {
     public record CreateAuctionRequest(
@@ -23,7 +22,7 @@ public class AuctionDtos {
             String id, String state, String vehicleId, String sellerId,
             String startsAt, String endsAt,
             BigDecimal startPrice, BigDecimal reservePrice, BigDecimal buyNowPrice,
-            BigDecimal minBidIncrement,                                  // NEW
+            BigDecimal minBidIncrement,
             String createdAt, String updatedAt
     ) {}
 }
