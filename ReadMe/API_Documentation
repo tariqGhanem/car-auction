@@ -1,0 +1,295 @@
+===========================
+ Auction System - API Documentation
+===========================
+
+Authentication:
+---------------
+- Most endpoints require a valid JWT issued by Keycloak.
+- Include in the request header:
+
+    Authorization: Bearer <token>
+
+===========================
+ Identity Service (/api/v1/user/**)
+===========================
+
+1. Register User
+----------------
+POST /api/v1/user/register
+
+Description:
+- Registers a new user in the system based on the authenticated JWT token.
+
+Request:
+- No body required.
+- JWT must include email, name, and roles.
+
+Response: 200 OK
+{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "SELLER"
+}
+
+------------------------------------------------------------
+
+2. Login
+--------
+POST /api/v1/user/login
+
+Description:
+- Authenticates an existing user using the JWT token.
+- Looks up user by email extracted from token.
+
+Response: 200 OK
+{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "SELLER"
+}
+
+If user not found:
+{
+  "error": "Bad Request",
+  "message": "User not found"
+}
+
+------------------------------------------------------------
+
+3. Test Endpoint
+----------------
+GET /api/v1/user/test
+
+Response: 200 OK
+"true"
+
+===========================
+ Inventory Service (/api/v1/vehicles/**)
+===========================
+
+1. Create Vehicle
+-----------------
+POST /api/v1/vehicles
+
+Request Body:
+{
+  "vin": "1HGCM82633A123456",
+  "make": "Toyota",
+  "model": "Corolla",
+  "year": 2022,
+  "mileage": 12000,
+  "titleStatus": "CLEAN",
+  "startingPrice": 9000.00,
+  "buyNowPrice": 12000.00,
+  "conditionGrade": 5,
+  "description": "Like new, one owner"
+}
+
+Response: 200 OK
+{
+  "id": 1,
+  "vin": "1HGCM82633A123456",
+  "make": "Toyota",
+  "model": "Corolla",
+  "year": 2022,
+  "mileage": 12000,
+  "titleStatus": "CLEAN",
+  "startingPrice": 9000.00,
+  "buyNowPrice": 12000.00,
+  "conditionGrade": 5,
+  "description": "Like new, one owner"
+}
+
+------------------------------------------------------------
+
+2. Get Vehicle by ID
+--------------------
+GET /api/v1/vehicles/{id}
+
+Response: 200 OK
+{ ...vehicle details... }
+
+------------------------------------------------------------
+
+3. Get All Vehicles
+-------------------
+GET /api/v1/vehicles
+
+Response: 200 OK
+[ ...list of vehicles... ]
+
+------------------------------------------------------------
+
+4. Test Endpoint
+----------------
+GET /api/v1/vehicles/test
+
+Response: 200 OK
+true
+
+------------------------------------------------------------
+
+5. Filter Vehicles
+------------------
+GET /api/v1/vehicles/filter?page=0&make=Toyota&yearFrom=2020&priceTo=15000
+
+Response: 200 OK
+{
+  "content": [ ...vehicles... ],
+  "pageable": { "pageNumber": 0, "pageSize": 20 },
+  "totalElements": 2,
+  "totalPages": 1
+}
+
+===========================
+ Auction Service (/api/v1/auction/**)
+===========================
+
+1. Get All Auctions
+-------------------
+GET /api/v1/auction/getAllAuctions
+
+Response: 200 OK
+[ ...list of auctions... ]
+
+------------------------------------------------------------
+
+2. Get Auction by ID
+--------------------
+GET /api/v1/auction/getAuctionById?id={id}
+
+Response: 200 OK
+{ ...auction details... }
+
+------------------------------------------------------------
+
+3. Create Auction
+-----------------
+POST /api/v1/auction/createAuction
+
+Request Body:
+{
+  "vehicleId": 10,
+  "sellerId": 42,
+  "startPrice": 5000.00,
+  "buyNowPrice": 12000.00,
+  "startsAt": "2025-09-16T10:00:00Z",
+  "endsAt": "2025-09-20T10:00:00Z",
+  "minBidIncrement": 100.00
+}
+
+Response: 200 OK
+{ ...auction details... }
+
+------------------------------------------------------------
+
+4. Filter Auctions
+------------------
+GET /api/v1/auction/filterAuction?dateFrom=2025-09-01T00:00:00Z&maxBuyNow=15000
+
+Response: 200 OK
+{
+  "content": [ ...auctions... ],
+  "pageable": { "pageNumber": 0, "pageSize": 20 },
+  "totalElements": 1,
+  "totalPages": 1
+}
+
+------------------------------------------------------------
+
+5. Update Auction
+-----------------
+POST /api/v1/auction/updateAuction?auctionId={id}&winnerId={id}&currentPrice={price}
+
+Response: 200 OK
+{ ...updated auction details... }
+
+------------------------------------------------------------
+
+6. Test Endpoint
+----------------
+GET /api/v1/auction/test
+
+Response: 200 OK
+true
+
+===========================
+ Bidding Service (/api/v1/bid/**)
+===========================
+
+1. Make a Bid
+-------------
+POST /api/v1/bid/makeABid
+
+Request Body:
+{
+  "auctionId": 2,
+  "amount": 5200.00
+}
+
+Response: 200 OK
+{
+  "id": 100,
+  "auctionId": 2,
+  "bidderEmail": "john@example.com",
+  "amount": 5200.00,
+  "timestamp": "2025-09-15T12:00:00Z"
+}
+
+------------------------------------------------------------
+
+2. Test Endpoint
+----------------
+GET /api/v1/bid/test
+
+Response: 200 OK
+true
+
+===========================
+ Billing Service (/api/v1/billing/**)
+===========================
+
+1. Get Invoice
+--------------
+GET /api/v1/billing/{auctionId}
+
+Response: 200 OK
+{
+  "invoiceId": 200,
+  "auctionId": 10,
+  "winnerId": 42,
+  "amount": 5200.00,
+  "status": "PENDING"
+}
+
+If no invoice exists:
+{
+  "error": "Not Found",
+  "message": "No invoice found for auction {auctionId}"
+}
+
+===========================
+ Notification Service (/api/v1/notifications/**)
+===========================
+
+1. Get User Notifications
+--------------------------
+GET /api/v1/notifications/{userId}
+
+Response: 200 OK
+[
+  {
+    "id": 1,
+    "userId": 42,
+    "message": "Your bid of 5200.00 was placed successfully.",
+    "timestamp": "2025-09-15T12:01:00Z"
+  },
+  {
+    "id": 2,
+    "userId": 42,
+    "message": "Auction 10 has ended. You won with 5200.00!",
+    "timestamp": "2025-09-20T10:00:00Z"
+  }
+]

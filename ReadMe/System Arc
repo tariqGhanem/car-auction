@@ -1,0 +1,173 @@
+===========================
+ Auction System - HLD
+===========================
+
+1. System Overview
+------------------
+The Auction System is a microservices-based platform enabling users to:
+- Register and authenticate securely.
+- Manage vehicle inventory.
+- Create and participate in auctions.
+- Place bids in real-time.
+- Handle billing for completed auctions.
+- Receive notifications for auction and bidding events.
+
+The system follows a service-per-database approach, uses event-driven architecture with Kafka,
+leverages caching for performance, and is accessed via a unified API Gateway.
+
+2. System Context
+-----------------
+Actors:
+- Seller: lists vehicles for auction.
+- Bidder: places bids on auctions.
+- Admin: manages system configurations.
+
+External Systems:
+- Keycloak: Authentication & Authorization.
+- (Optional future) Payment Provider: external billing integration.
+
+3. Core Components
+------------------
+API Gateway:
+- Single entry point for clients.
+- Routes requests to backend services using Eureka Service Discovery.
+- Applies authentication, logging, rate limiting, and security policies.
+
+Identity Service:
+- Integrates with Keycloak for authentication.
+- Provides user profile management.
+- Issues and validates JWT tokens.
+- Registered with Eureka for discovery.
+
+Inventory Service:
+- Manages vehicles (CRUD, filtering, search).
+- Owns vehicles schema in MySQL.
+- Uses Redis for caching frequent queries.
+- Registered with Eureka for discovery.
+
+Auction Service:
+- Manages auctions lifecycle (create, start, end).
+- Publishes AuctionCreated and AuctionEnded events to Kafka.
+- Owns auctions schema in MySQL.
+- Uses Redis to cache active auctions.
+- Registered with Eureka for discovery.
+
+Bidding Service:
+- Manages bids placed by users.
+- Validates auctions via Auction Service.
+- Publishes BidPlaced events to Kafka.
+- Owns bids schema in MySQL.
+- Uses Redis to cache latest bids for performance.
+- Registered with Eureka for discovery.
+
+Billing Service:
+- Handles billing once auctions close.
+- Consumes AuctionEnded events from Kafka.
+- Generates invoices and stores payment info.
+- Owns billing schema in MySQL.
+- Registered with Eureka for discovery.
+
+Notification Service:
+- Subscribes to AuctionCreated, BidPlaced, and AuctionEnded events from Kafka.
+- Sends notifications to users (email, push, or websocket).
+- Optionally stores logs of notifications.
+- Registered with Eureka for discovery.
+
+Supporting Infrastructure:
+- Eureka Service Registry for service discovery and load balancing.
+- Kafka + Zookeeper as messaging backbone.
+- MySQL with one schema per service.
+- Redis for caching frequently accessed data.
+- Docker Compose / Kubernetes for deployment.
+
+4. Data Ownership
+-----------------
+- Inventory Service: Vehicles
+- Auction Service: Auction metadata
+- Bidding Service: Bids
+- Billing Service: Invoices and payments
+- Notification Service: Notification logs
+- Keycloak: Users, roles, tokens
+- Redis: Cached auction, bidding, and inventory data
+
+5. Interaction Flows
+--------------------
+Create Auction:
+1. Seller calls API Gateway -> Auction Service (via Eureka).
+2. Auction stored in DB.
+3. AuctionCreated event published to Kafka.
+4. Notification Service consumes event -> notifies bidders.
+5. Auction cached in Redis for quick lookups.
+
+Place a Bid:
+1. Bidder calls API Gateway -> Bidding Service (via Eureka).
+2. Bidding Service validates auction state.
+3. Bid stored in DB and cached in Redis.
+4. BidPlaced event published to Kafka.
+5. Notification Service consumes event -> alerts seller.
+
+Close Auction:
+1. Auction Service detects end time -> updates DB.
+2. AuctionEnded event published to Kafka.
+3. Bidding Service locks bidding and clears cache.
+4. Billing Service consumes event -> generates invoice.
+5. Notification Service consumes event -> notifies winner and seller.
+
+6. Deployment View
+------------------
+                       +------------------+
+                       |    Keycloak      |
+                       | (Auth & Tokens)  |
+                       +--------+---------+
+                                |
+                                v
+                       +------------------+
+                       |   API Gateway    |
+                       | (Spring Cloud)   |
+                       +--------+---------+
+                                |
+ ------------------------------------------------------------
+ |           |           |           |           |           |
+ v           v           v           v           v           v
++----------+ +----------+ +----------+ +----------+ +----------+
+| Identity | | Auction  | | Bidding  | | Inventory| | Billing  |
+| Service  | | Service  | | Service  | | Service  | | Service  |
++----------+ +----------+ +----------+ +----------+ +----------+
+    \            |            |            |            /
+     \           |            |            |           /
+      \------------------------------------------------
+                        Eureka Service Registry
+                               |
+                               v
+                        Kafka + Zookeeper
+                               |
+                               v
+                       +-----------------+
+                       | Notification Svc|
+                       +-----------------+
+                               |
+                 ---------------------------------
+                 |                               |
+          MySQL Databases                 Redis Cache Cluster
+       (separate schema per service)   (cache vehicles, bids, auctions)
+
+
+7. Non-Functional Requirements
+------------------------------
+- Scalability: Stateless services scale horizontally, Kafka ensures scalability, Eureka enables load balancing.
+- Security: JWT-based authentication with Keycloak, role-based access control.
+- Reliability: Kafka guarantees event durability, retries for transient failures.
+- Observability: Centralized logging, Prometheus/Grafana metrics, distributed tracing.
+- Maintainability: Service-per-database pattern, common-libs for shared utilities.
+- Performance: Redis caching reduces DB load and improves response times.
+- Fault Tolerance: Services recover gracefully, Kafka ensures message durability.
+
+8. Future Enhancements
+----------------------
+- Real-time bidding with WebSocket or Server-Sent Events.
+- External payment gateway integration.
+- AI/ML for dynamic pricing recommendations.
+- Multi-tenancy to support multiple auction houses.
+- Enhanced caching strategies with Redis clusters.
+- Database optimizations with sharding and indexing.
+- Strengthen Eureka clustering for high availability.
