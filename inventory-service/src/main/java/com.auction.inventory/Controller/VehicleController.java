@@ -1,11 +1,12 @@
 package com.auction.inventory.Controller;
 
-
-import com.auction.common.dto.VehicleDTO;
 import com.auction.inventory.Mapper.VehicleMapper;
 import com.auction.inventory.Models.Domain.TitleStatus;
 import com.auction.inventory.Models.Vehicle;
+import com.auction.inventory.Models.VehicleRequest;
+import com.auction.inventory.Models.VehicleResponse;
 import com.auction.inventory.Services.VehicleService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -20,38 +21,47 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
-
-
-    @PostMapping("/addVehicle")
-    public ResponseEntity<Vehicle> createVehicle(@RequestBody Vehicle vehicle) {
-        return ResponseEntity.ok(vehicleService.createVehicle(vehicle));
+    @PostMapping
+    public ResponseEntity<VehicleResponse> createVehicle(@Valid @RequestBody VehicleRequest request) {
+        Vehicle saved = vehicleService.createVehicle(VehicleMapper.toEntity(request));
+        return ResponseEntity.ok(VehicleMapper.toResponse(saved));
     }
 
-    @GetMapping("/getVehicleById")
-    public ResponseEntity<VehicleDTO> getVehicle(@RequestParam(name="id") Long id) {
-
-        return ResponseEntity.ok(VehicleMapper.vehicleToVehicleDTO(vehicleService.getVehicle(id)));
+    @GetMapping("/{id}")
+    public ResponseEntity<VehicleResponse> getVehicle(@PathVariable("id") Long id) {
+        Vehicle vehicle = vehicleService.getVehicle(id);
+        return ResponseEntity.ok(VehicleMapper.toResponse(vehicle));
     }
 
-    @GetMapping("/getAllVehicles")
-    public ResponseEntity<List<Vehicle>> getAllVehicles() {
-        return ResponseEntity.ok(vehicleService.getAllVehicles());
+    @GetMapping
+    public ResponseEntity<List<VehicleResponse>> getAllVehicles() {
+        List<VehicleResponse> response = vehicleService.getAllVehicles()
+                .stream()
+                .map(VehicleMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("test")
-    public boolean test(){
-        return true;
+    @GetMapping("/test")
+    public ResponseEntity<Boolean> test() {
+        return ResponseEntity.ok(true);
     }
 
     @GetMapping("/filter")
-    public Page<Vehicle> filterVehicle(
-            @RequestParam(name = "page") int page , @RequestParam(required = false , name = "make") String make
-            , @RequestParam(required = false , name = "model") String model , @RequestParam(required = false , name = "yearFrom" ) Integer yearFrom
-            , @RequestParam(required = false,name = "yearTo") Integer yearTo , @RequestParam(required = false , name = "maxMiles") Integer maxMiles
-            , @RequestParam(required = false , name = "priceFrom")BigDecimal priceFrom, @RequestParam(required = false ,name = "priceTo")BigDecimal priceTo
-            , @RequestParam(required = false , name = "status") TitleStatus status
+    public ResponseEntity<Page<VehicleResponse>> filterVehicle(
+            @RequestParam(name = "page") int page,
+            @RequestParam(required = false, name = "make") String make,
+            @RequestParam(required = false, name = "model") String model,
+            @RequestParam(required = false, name = "yearFrom") Integer yearFrom,
+            @RequestParam(required = false, name = "yearTo") Integer yearTo,
+            @RequestParam(required = false, name = "maxMiles") Integer maxMiles,
+            @RequestParam(required = false, name = "priceFrom") BigDecimal priceFrom,
+            @RequestParam(required = false, name = "priceTo") BigDecimal priceTo,
+            @RequestParam(required = false, name = "status") TitleStatus status
     ) {
-       return vehicleService.filterVehicle(page , make , model , yearFrom , yearTo , maxMiles , priceFrom , priceTo , status);
+        Page<VehicleResponse> response = vehicleService.filterVehicle(page, make, model, yearFrom, yearTo, maxMiles, priceFrom, priceTo, status)
+                .map(VehicleMapper::toResponse);
+        return ResponseEntity.ok(response);
     }
 
 }

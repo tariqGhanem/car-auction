@@ -1,0 +1,173 @@
+version: "3.9"
+
+services:
+  test-mysql:
+    image: mysql:8.4
+    container_name: mysql-test
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keycloakdb
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: keycloak
+    ports:
+      - "3308:3306"  # ⬅️ test port, separate from prod (3307)
+    networks:
+      - test-net
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+  keycloak-test:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: keycloak-test
+    command:
+      - start-dev
+      - --features=preview,hostname
+      - --hostname-url=http://localhost:9000
+      - --hostname-strict=false
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://test-mysql:3306/keycloakdb
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+    depends_on:
+      test-mysql:
+        condition: service_healthy
+    ports:
+      - "9000:8080"  # ⬅️ exposes Keycloak locally on port 9000
+    networks:
+      - test-net
+    volumes:
+      - keycloak_test_data:/opt/keycloak/data
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'exec 3<>/dev/tcp/localhost/8080'" ]
+      interval: 10s
+      retries: 10
+      start_period: 40s
+
+  eureka:
+    build: ./service-registry
+    container_name: eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mysql_test_data:
+  keycloak_test_data:
+
+networks:
+  test-net:
+
+#
+#
+#  api-gateway:
+#    build: ./api-gateway
+#    container_name: api-gateway
+#    ports:
+#      - "8081:8080"
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+#      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-auction}
+#    depends_on:
+#      keycloak:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#    networks:
+#      - backend
+#
+#
+#  identity-service:
+#    build: ./identity-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-auction}?useSSL=false&allowPublicKeyRetrieval=true
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+#      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-auction}
+#    ports:
+#      - "8091:8091"
+#    networks:
+#      - backend
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#      keycloak:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#
+#  inventory-service:
+#    build: ./inventory-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-auction}?useSSL=false&allowPublicKeyRetrieval=true
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+#      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-auction}
+#    ports:
+#      - "8092:8092"
+#    networks:
+#      - backend
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#      keycloak:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#
+#
+#  auction-service:
+#    build: ./auction-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-auction}?useSSL=false&allowPublicKeyRetrieval=true
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+#      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-auction}
+#    ports:
+#      - "8093:8093"
+#    networks:
+#      - backend
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#      keycloak:
+#        condition: service_healthy
+#      eureka:
+#        condition: service_healthy
+#
+#  bid-service:
+#    build: ./bid-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-auction}?useSSL=false&allowPublicKeyRetrieval=true
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+#      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM:-auction}
+#    depends_on:
+#      kafka:
+#        condition: service_healthy
+#      zookeeper:
+#        condition: service_healthy
+#    networks:
+#      - backend

@@ -1,15 +1,24 @@
 server:
-  port: 8092
+  port: 8093
+
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    metrics:
+      tags:
+        application: ${spring.application.name}
 
 spring:
   application:
-    name: inventory-service
+    name: auction-service
   cloud:
     inetutils:
       preferred-networks:
@@ -22,15 +31,16 @@ spring:
         - VMware.*
         - VirtualBox.*
   datasource:
-    url: jdbc:mysql://localhost:3308/keycloakdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: keycloak
-    password: keycloak
+    url: jdbc:mysql://mysql:3306/auction?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: auction
+    password: auction
     driver-class-name: com.mysql.cj.jdbc.Driver
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:9000/realms/auction
+          issuer-uri: http://keycloak:8080/realms/auction
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -46,3 +56,5 @@ eureka:
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
+
+

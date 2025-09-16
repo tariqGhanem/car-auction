@@ -1,5 +1,6 @@
 package com.auction.auction.Configuration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -25,7 +26,8 @@ public class SecurityConfiguration {
 
     // Provide a JwtDecoder bean that Spring Security will use
     @Bean
-    JwtDecoder jwtDecoder() {
-        return JwtDecoders.fromIssuerLocation("http://localhost:9000/realms/auction");
+    JwtDecoder jwtDecoder(
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri) {
+        return JwtDecoders.fromIssuerLocation(issuerUri);
     }
 }
